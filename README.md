@@ -225,10 +225,19 @@ docker-compose build --no-cache
 docker-compose up
 ```
 
+## 🐳 Optimización de Docker
+
+Las imágenes de Docker se han optimizado utilizando **builds multi-etapa**.
+
+1.  **Etapa de Compilación**: Se utiliza una imagen `alpine` con el compilador `g++` y las herramientas necesarias para compilar la aplicación C++.
+2.  **Etapa de Producción**: Se utiliza una imagen `alpine` limpia y vacía. Solo se copia el binario ejecutable de la etapa anterior.
+
+Este enfoque reduce drásticamente el tamaño de la imagen final, ya que no contiene las dependencias de compilación, resultando en imágenes más seguras y ligeras (menos de 5MB).
+
 ## 📈 Métricas
 
-- **Tamaño imagen servidor**: ~9.8 MB
-- **Tamaño imagen cliente**: ~9.5 MB
+- **Tamaño imagen servidor**: ~4.1 MB
+- **Tamaño imagen cliente**: ~3.8 MB
 - **Tiempo de compilación**: ~45 segundos
 - **Tiempo de respuesta**: < 10ms
 - **Tokens generados por segundo**: ~1000

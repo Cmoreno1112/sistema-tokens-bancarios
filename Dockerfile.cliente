@@ -1,13 +1,27 @@
-FROM alpine:latest
+# --- Etapa 1: Build ---
+# Usamos una imagen con herramientas de compilación para compilar el código.
+FROM alpine:latest AS builder
 
+# Instala dependencias de compilación
 RUN apk add --no-cache g++ libstdc++
 
 WORKDIR /app
 
 COPY cliente.cpp .
 
+# Compila, optimiza y elimina el código fuente
 RUN g++ -o cliente cliente.cpp -O2 -static && \
     strip cliente && \
     rm cliente.cpp
 
+# --- Etapa 2: Producción ---
+# Usamos una imagen Alpine limpia y ligera para la versión final.
+FROM alpine:latest
+
+WORKDIR /app
+
+# Copiamos solo el ejecutable compilado desde la etapa anterior
+COPY --from=builder /app/cliente .
+
+# Comando para ejecutar el cliente
 CMD ["./cliente"]

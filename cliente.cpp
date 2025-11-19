@@ -12,12 +12,23 @@
 
 using namespace std;
 
+/**
+ * @brief Obtiene el timestamp actual en segundos desde la Época (Epoch).
+ * @return Un valor long long representando el timestamp.
+ */
 long long getTimestamp() {
     auto ahora = chrono::system_clock::now();
     auto duracion = ahora.time_since_epoch();
     return chrono::duration_cast<chrono::seconds>(duracion).count();
 }
 
+/**
+ * @brief Establece una conexión con el servidor, envía un mensaje y recibe una respuesta.
+ * @param host El hostname o la dirección IP del servidor.
+ * @param puerto El puerto del servidor.
+ * @param mensaje El mensaje a enviar.
+ * @return La respuesta recibida del servidor.
+ */
 string enviarMensaje(const string& host, int puerto, const string& mensaje) {
     int sock = 0;
     struct sockaddr_in serv_addr;
@@ -25,19 +36,19 @@ string enviarMensaje(const string& host, int puerto, const string& mensaje) {
     
     cout << "[DEBUG] Intentando conectar a: " << host << ":" << puerto << endl;
     
-    // Crear socket
+    // Crear el socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         cout << "[ERROR] No se pudo crear socket" << endl;
         return "";
     }
     
-    // Configurar estructura de dirección
+    // Configurar la estructura de la dirección del servidor
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(puerto);
     
-    // Intentar primero como IP directa
+    // Intenta convertir el host de texto a formato de red (IP)
     if (inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr) <= 0) {
-        // Si falla, intentar resolver como hostname
+        // Si falla, asume que es un hostname y trata de resolverlo
         cout << "[DEBUG] No es una IP, intentando resolver hostname..." << endl;
         
         struct addrinfo hints, *result;
@@ -53,7 +64,7 @@ string enviarMensaje(const string& host, int puerto, const string& mensaje) {
             return "";
         }
         
-        // Copiar dirección IP resuelta
+        // Copia la dirección IP resuelta a la estructura de dirección
         struct sockaddr_in *addr = (struct sockaddr_in *)result->ai_addr;
         serv_addr.sin_addr = addr->sin_addr;
         
@@ -61,7 +72,7 @@ string enviarMensaje(const string& host, int puerto, const string& mensaje) {
         inet_ntop(AF_INET, &(serv_addr.sin_addr), ip_str, INET_ADDRSTRLEN);
         cout << "[DEBUG] Hostname resuelto a IP: " << ip_str << endl;
         
-        freeaddrinfo(result);
+        freeaddrinfo(result); // Libera la memoria de la resolución
     } else {
         cout << "[DEBUG] IP valida detectada" << endl;
     }
@@ -76,17 +87,24 @@ string enviarMensaje(const string& host, int puerto, const string& mensaje) {
     
     cout << "[DEBUG] Conexion establecida exitosamente!" << endl;
     
-    // Enviar mensaje
+    // Enviar el mensaje al servidor
     send(sock, mensaje.c_str(), mensaje.length(), 0);
     
-    // Recibir respuesta
+    // Leer la respuesta del servidor
     int valread = read(sock, buffer, 1024);
     
-    close(sock);
+    close(sock); // Cerrar el socket
     
     return string(buffer, valread);
 }
 
+/**
+ * @brief Envía una solicitud al servidor para obtener un token de un solo uso.
+ * @param host El hostname o IP del servidor.
+ * @param puerto El puerto del servidor.
+ * @param usuario El nombre de usuario para el que se solicita el token.
+ * @return El token recibido del servidor, o una cadena vacía si falla.
+ */
 string solicitarToken(const string& host, int puerto, const string& usuario) {
     string mensaje = "SOLICITAR_TOKEN|USUARIO:" + usuario;
     cout << "\n[CLIENTE] Solicitando token para usuario: " << usuario << endl;
@@ -98,6 +116,7 @@ string solicitarToken(const string& host, int puerto, const string& usuario) {
         return "";
     }
     
+    // Parsea la respuesta para extraer el token y su tiempo de expiración
     size_t pos = respuesta.find("TOKEN:");
     size_t fin = respuesta.find("|", pos);
     
@@ -117,12 +136,22 @@ string solicitarToken(const string& host, int puerto, const string& usuario) {
     return "";
 }
 
+/**
+ * @brief Envía una solicitud de transacción al servidor, incluyendo el token de seguridad.
+ * @param host El hostname o IP del servidor.
+ * @param puerto El puerto del servidor.
+ * @param usuario El usuario que realiza la transacción.
+ * @param destino El destinatario de la transacción.
+ * @param monto El monto a transferir.
+ * @param token El token de seguridad para autorizar la transacción.
+ */
 void realizarTransaccion(const string& host, int puerto, 
                          const string& usuario, const string& destino,
                          double monto, const string& token) {
     
     long long timestamp = getTimestamp();
     
+    // Construye el mensaje de la transacción
     stringstream mensaje;
     mensaje << "TRANS|USUARIO:" << usuario 
             << "|DESTINO:" << destino 
@@ -140,6 +169,7 @@ void realizarTransaccion(const string& host, int puerto,
     
     cout << "\n[SERVIDOR RESPONDIO]: " << respuesta << endl;
     
+    // Informa al usuario si la transacción fue aprobada o rechazada
     if (respuesta.find("APROBADA") != string::npos) {
         cout << "======================================" << endl;
         cout << "     OK TRANSACCION EXITOSA" << endl;
@@ -151,14 +181,21 @@ void realizarTransaccion(const string& host, int puerto,
     }
 }
 
+/**
+ * @brief Obtiene el hostname del servidor desde la variable de entorno SERVIDOR_HOST.
+ * @return El hostname del servidor o "servidor_tokens" como valor por defecto.
+ */
 string obtenerHostServidor() {
     const char* env_host = getenv("SERVIDOR_HOST");
     if (env_host != nullptr) {
         return string(env_host);
     }
-    return "servidor_tokens";
+    return "servidor_tokens"; // Valor por defecto si la variable no está definida
 }
 
+/**
+ * @brief Muestra un menú interactivo para que el usuario realice operaciones.
+ */
 void menuInteractivo() {
     string host = obtenerHostServidor();
     int puerto = 8080;
@@ -181,7 +218,7 @@ void menuInteractivo() {
         
         int opcion;
         cin >> opcion;
-        cin.ignore();
+        cin.ignore(); // Limpia el buffer de entrada
         
         if (opcion == 1) {
             string token = solicitarToken(host, puerto, usuario);
@@ -207,7 +244,7 @@ void menuInteractivo() {
         }
         else if (opcion == 3) {
             cout << "\nOpciones de servidor:" << endl;
-            cout << "1. servidor_tokens (hostname)" << endl;
+            cout << "1. servidor_tokens (hostname por defecto en Docker)" << endl;
             cout << "2. servidor (hostname alternativo)" << endl;
             cout << "3. Ingresar IP manualmente" << endl;
             cout << "Opcion: ";
@@ -237,12 +274,20 @@ void menuInteractivo() {
     }
 }
 
+/**
+ * @brief Función principal del cliente.
+ * 
+ * Puede operar en modo interactivo (sin argumentos) o en modo de un solo comando
+ * (proporcionando usuario, destino, monto y host como argumentos).
+ */
 int main(int argc, char* argv[]) {
+    // Si no se pasan argumentos, se inicia el menú interactivo.
     if (argc == 1) {
         menuInteractivo();
         return 0;
     }
     
+    // Si se pasan argumentos, se ejecuta en modo de un solo comando.
     if (argc < 5) {
         cout << "Uso: " << argv[0] << " <usuario> <destino> <monto> <servidor_host>" << endl;
         cout << "O ejecute sin argumentos para modo interactivo" << endl;
@@ -255,6 +300,7 @@ int main(int argc, char* argv[]) {
     string host = argv[4];
     int puerto = 8080;
     
+    // 1. Solicitar token
     string token = solicitarToken(host, puerto, usuario);
     
     if (token.empty()) {
@@ -265,6 +311,7 @@ int main(int argc, char* argv[]) {
     cout << "\nEsperando 2 segundos antes de realizar transaccion..." << endl;
     sleep(2);
     
+    // 2. Realizar transacción con el token obtenido
     realizarTransaccion(host, puerto, usuario, destino, monto, token);
     
     return 0;

@@ -1,22 +1,37 @@
-# Usa Alpine Linux como base (muy ligero, ~5MB)
-FROM alpine:latest
+# --- Etapa 1: Build ---
+# En esta etapa, usamos una imagen con las herramientas de compilación (g++, etc.)
+# para compilar el código fuente de la aplicación.
+FROM alpine:latest AS builder
 
-# Instala solo lo necesario: compilador g++ y biblioteca estándar C++
+# Instala las dependencias de compilación
 RUN apk add --no-cache g++ libstdc++
 
-# Establece directorio de trabajo
+# Establece el directorio de trabajo
 WORKDIR /app
 
 # Copia el código fuente
 COPY servidor.cpp .
 
-# Compila el código con optimizaciones y lo comprime
+# Compila la aplicación para crear un binario estático,
+# elimina símbolos de depuración (strip) y finalmente borra el código fuente.
 RUN g++ -o servidor servidor.cpp -O2 -static && \
     strip servidor && \
     rm servidor.cpp
 
-# Expone el puerto 8080
+# --- Etapa 2: Producción ---
+# En esta etapa, usamos una imagen Alpine limpia, que es muy ligera.
+# No contiene herramientas de compilación, solo lo mínimo necesario para ejecutar.
+FROM alpine:latest
+
+# Establece el directorio de trabajo
+WORKDIR /app
+
+# Copia SOLAMENTE el binario compilado desde la etapa 'builder'.
+# Esto hace que la imagen final sea mucho más pequeña.
+COPY --from=builder /app/servidor .
+
+# Expone el puerto 8080 para que el servidor pueda recibir conexiones
 EXPOSE 8080
 
-# Comando para ejecutar el servidor
+# Comando para ejecutar el servidor al iniciar el contenedor
 CMD ["./servidor"]
