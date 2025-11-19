@@ -1,0 +1,13 @@
+FROM alpine:latest
+
+RUN apk add --no-cache g++ libstdc++
+
+WORKDIR /app
+
+COPY cliente.cpp .
+
+RUN g++ -o cliente cliente.cpp -O2 -static && \
+    strip cliente && \
+    rm cliente.cpp
+
+CMD ["./cliente"]

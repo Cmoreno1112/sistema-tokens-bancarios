@@ -1,0 +1,22 @@
+# Usa Alpine Linux como base (muy ligero, ~5MB)
+FROM alpine:latest
+
+# Instala solo lo necesario: compilador g++ y biblioteca estándar C++
+RUN apk add --no-cache g++ libstdc++
+
+# Establece directorio de trabajo
+WORKDIR /app
+
+# Copia el código fuente
+COPY servidor.cpp .
+
+# Compila el código con optimizaciones y lo comprime
+RUN g++ -o servidor servidor.cpp -O2 -static && \
+    strip servidor && \
+    rm servidor.cpp
+
+# Expone el puerto 8080
+EXPOSE 8080
+
+# Comando para ejecutar el servidor
+CMD ["./servidor"]

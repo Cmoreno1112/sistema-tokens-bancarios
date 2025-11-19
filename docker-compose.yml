@@ -1,15 +1,17 @@
-version: '3.8'
-
 services:
   servidor:
     build:
       context: .
       dockerfile: Dockerfile.servidor
     container_name: servidor_tokens
+    hostname: servidor_tokens
     ports:
       - "8080:8080"
     networks:
-      - red_transacciones
+      red_transacciones:
+        aliases:
+          - servidor
+          - servidor_tokens
     restart: unless-stopped
     
   cliente:
@@ -23,6 +25,8 @@ services:
       - servidor
     networks:
       - red_transacciones
+    environment:
+      - SERVIDOR_HOST=servidor_tokens
 
 networks:
   red_transacciones:
