@@ -1,0 +1,23 @@
+# Binarios compilados
+servidor
+cliente
+*.o
+*.out
+*.exe
+
+# Archivos de Docker
+.dockerignore
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log

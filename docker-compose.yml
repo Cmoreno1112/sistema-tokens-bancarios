@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  servidor:
+    build:
+      context: .
+      dockerfile: Dockerfile.servidor
+    container_name: servidor_tokens
+    ports:
+      - "8080:8080"
+    networks:
+      - red_transacciones
+    restart: unless-stopped
+    
+  cliente:
+    build:
+      context: .
+      dockerfile: Dockerfile.cliente
+    container_name: cliente_transacciones
+    stdin_open: true
+    tty: true
+    depends_on:
+      - servidor
+    networks:
+      - red_transacciones
+
+networks:
+  red_transacciones:
+    driver: bridge
